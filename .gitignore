@@ -1,0 +1,13 @@
+*.pid
+*.swp
+.DS_Store
+bin/*
+.db-data/
+*/.docker/
+
+### Other ###
+.idea/
+
+### .gitkeep ###
+!.gitkeep
+

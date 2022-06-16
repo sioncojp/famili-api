@@ -1,0 +1,62 @@
+version: "3"
+
+services:
+  app:
+    image: famili-api
+    container_name: famili-api_app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./examples:/examples
+    ports:
+      - 8080:8080
+    command: -c /examples/config.toml
+    networks:
+      - famili-api
+    depends_on: {"db": {condition: service_healthy}}
+
+  db:
+    image: mysql:latest
+    container_name: famili-api_db
+    hostname: db
+    platform: linux/x86_64 # M1チップ用
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: famili-api
+      MYSQL_USER: famili-api
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_HOST: '%'
+      TZ: 'Asia/Tokyo'
+    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-authentication-plugin=mysql_native_password
+    volumes:
+      - .db-data:/var/lib/mysql
+    ports:
+      - 13306:3306
+    networks:
+      - famili-api
+    healthcheck: # https://dev.mysql.com/doc/refman/8.0/en/mysqladmin.html
+      test: [ 'CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1', '--user=famili-api', '--password=password' ]
+      interval: 1s
+      timeout: 10s
+      retries: 25
+
+  migrate:
+    image: migrate/migrate
+    container_name: migrate
+    hostname: migrate
+    volumes:
+      - ./migrations:/migrations
+    command: -path "/migrations" -database "mysql://famili-api:password@tcp(db:3306)/famili-api" up
+    networks:
+      - famili-api
+    depends_on: {"db": {condition: service_healthy}}
+
+volumes:
+  famili-api_db-data:
+
+networks:
+  famili-api:
+    driver: bridge

@@ -1,0 +1,10 @@
+[service]
+env = "development"
+
+[log]
+
+[mysql]
+url        = "db"
+dbName     = "famili-api"
+username   = "famili-api"
+password   = "password"
