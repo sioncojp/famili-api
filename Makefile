@@ -16,6 +16,10 @@ gosumdb    := off
 goroot     := $(go_bindir)/go
 go         := $(go_bindir)/go/bin/go
 arch       := $(shell arch)
+
+db_name      := famili
+db_user_name := famili-api
+
 help:
 	@awk -F ':|##' '/^[^\t].+?:.*?##/ { printf "\033[36m%-22s\033[0m %s\n", $$1, $$NF }' $(MAKEFILE_LIST)
 
@@ -74,7 +78,7 @@ go/test: go/install ## go test
 
 ### docker
 docker/build: ## docker build
-	DOCKER_BUILDKIT=1 docker build . -t $(name)
+	DOCKER_BUILDKIT=1 docker build -f docker/api/Dockerfile . -t $(name) --secret id=gitconfig,src=$(HOME)/.gitconfig
 
 ### docker_compose
 docker_compose/up: ## compose起動
@@ -82,6 +86,9 @@ docker_compose/up: ## compose起動
 
 docker_compose/down: ## compose停止
 	COMPOSE_DOCKER_CLI_BUILD=1 docker-compose down
+
+docker_compose/down_f: ## composeではないけど、dockerで強制停止する. conflict対策
+	docker ps -a | grep "$(name)" | awk '{print $$1}' | xargs docker rm -f
 
 docker_compose/down_all: ## compose停止 + 全てを初期化する
 	COMPOSE_DOCKER_CLI_BUILD=1 docker-compose down --rmi all --volumes --remove-orphans
@@ -91,7 +98,7 @@ docker_compose/rebuild: ## appだけbuildし直す
 	COMPOSE_DOCKER_CLI_BUILD=1 docker-compose up -d app
 
 ### migrate
-migrate := -path "/migrations" -database "mysql://$(name):password@tcp(db:3306)/$(name)"
+migrate := -path "/migrations" -database "mysql://$(db_user_name):password@tcp(db:3306)/$(db_name)"
 
 migrate/up: ## migration. docker compose up後に実行できる
 	docker compose run migrate $(migrate) up
